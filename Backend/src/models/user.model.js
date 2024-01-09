@@ -6,29 +6,24 @@ const userSchema = new Schema(
     {
         username: {
             type: String,
-            unique: true,
             required: true,
-            trim: true,
+            unique: true,
             lowercase: true,
+            trim: true, 
             index: true
         },
         email: {
             type: String,
-            unique: true,
             required: true,
-            trim: true,
-            lowercase: true,
+            unique: true,
+            lowecase: true,
+            trim: true, 
         },
         fullName: {
             type: String,
             required: true,
-            trim: true,
+            trim: true, 
             index: true
-        },
-        password: {
-            type: String,
-            required: [true,'PAssword is required'],
-            trim: true,
         },
         avatar: {
             type: String, // cloudinary url
@@ -37,20 +32,24 @@ const userSchema = new Schema(
         coverImage: {
             type: String, // cloudinary url
         },
-        watchHistory:[
+        watchHistory: [
             {
                 type: Schema.Types.ObjectId,
-                ref: 'Video'
+                ref: "Video"
             }
         ],
-       refreshToken:{
-              type: String,
-         },
-       
-    },{
+        password: {
+            type: String,
+            required: [true, 'Password is required']
+        },
+        refreshToken: {
+            type: String
+        }
+
+    },
+    {
         timestamps: true
     }
-    
 )
 
 
@@ -61,7 +60,7 @@ userSchema.pre("save", async function (next) {
     next()
 })
 
-userSchema.methods.isPasswordCorrect = async function (password){
+userSchema.methods.isPasswordCorrect = async function(password){
     return await bcrypt.compare(password, this.password)
 }
 
@@ -70,9 +69,9 @@ userSchema.methods.generateAccessToken = function(){
     return jwt.sign(
         {
             _id: this._id,
-            username: this.username,
             email: this.email,
-            fullName: this.fullName,
+            username: this.username,
+            fullName: this.fullName
         },
         process.env.ACCESS_TOKEN_SECRET,
         {
@@ -85,6 +84,7 @@ userSchema.methods.generateRefreshToken = function(){
     return jwt.sign(
         {
             _id: this._id,
+            
         },
         process.env.REFRESH_TOKEN_SECRET,
         {
