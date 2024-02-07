@@ -7,7 +7,7 @@
 
     export const varifyJWT = asyncHandler(async(req, _, next) => {  //if res is not used then we can use _ instead of res
     try {
-            const token = req.cookies.accessToken || req.header("Authorization")?.replace("Bearer ", "")
+            const token = req.cookies?.accessToken || req.header("Authorization")?.replace("Bearer ", "")
     
             if(!token){
                 throw new ApiError(401, "Unauthorized request")
