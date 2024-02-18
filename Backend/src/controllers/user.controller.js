@@ -4,6 +4,8 @@ import {User} from '../models/user.model.js';
 import { uploadOnCloudinary } from '../utils/cloudinary.js';
 import { ApiResoponse } from '../utils/ApiResponse.js';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
+
 
 
 const generateAccessAndRefreshToken = async(userId) => {
@@ -21,6 +23,7 @@ const generateAccessAndRefreshToken = async(userId) => {
         throw new ApiError(500, "Something went wrong while generating refresh and access token")
     }
 }
+
 
 const registerUser = asyncHandler(async (req, res) => {
     // get user details from frontend
@@ -95,6 +98,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
 } ) 
 
+
 const loginUser = asyncHandler(async (req, res) => {
     //req -> data 
     //username or email check
@@ -147,6 +151,7 @@ const loginUser = asyncHandler(async (req, res) => {
     
 })
 
+
 const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
@@ -172,6 +177,7 @@ const logoutUser = asyncHandler(async (req, res) => {
         .clearCookie("refreshToken", options)
         .json(new ApiResoponse(200, {}, "User logged Out"));
 });
+
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
@@ -219,6 +225,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 });
 
+
 const changeCurrentPassword = asyncHandler(async (req, res) => {
     const {oldPassword, newPassword} = req.body;
 
@@ -236,11 +243,13 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
     .json(new ApiResoponse(200, {}, "Password changed successfully"))
 });
 
+
 const getCurrentUser = asyncHandler(async (req, res)=> {
     return res
     .status(200)
     .json(new ApiResoponse(200, req.user, "User details fetched successfully"))
 })
+
 
 const updateAccountDetails = asyncHandler( async(req, res)=>{
     const {fullName, email,} = req.body
@@ -264,6 +273,7 @@ const updateAccountDetails = asyncHandler( async(req, res)=>{
     .status(200)
     .json (new ApiResoponse(200, user, "Account details updated successfully"))
 })
+
 
 const updateUserAvatar = asyncHandler(async(req, res)=>{
     const avatarLocalPath = req.file?.path
@@ -294,6 +304,7 @@ const updateUserAvatar = asyncHandler(async(req, res)=>{
         new ApiResoponse(200, user, "Avatar image updated successfully")
         )
 })
+
 
 const updateUserCoverImage = asyncHandler(async(req, res)=>{
     const coverImageLocalPath = req.file?.path
@@ -397,6 +408,66 @@ const getUserChannelProfile = asyncHandler(async(req, res)=>{
 })
 
 
+const getWatchHistory = asyncHandler(async(req, res)=>{
+    const user = await User.aggregate([
+        {
+            $match: {
+                _id: new mongoose.Types.ObjectId(req.user?._id) // we are converting the string id to objectId because we are comparing it with objectId  
+                // we are using mongoose because we are using mongoose types and we are using it to convert the string id to objectId 
+                // we have to do it ths way and not directly req.user._id because we are using aggregate pipeline the code goes directly to the db so mongoose itself will not be able to convert the string id to objectId
+
+            }
+        },
+        {
+            $lookup: {
+                from: "videos",
+                localField: "watchHistory",
+                foreignField: "_id",
+                as: "watchHistory",
+                pipeline: [
+                    {
+                        $lookup: {
+                            from: "users",
+                            localField: "owner",
+                            foreignField: "_id",
+                            as: "owner",
+                            pipeline: [
+                                {
+                                    $project: {
+                                        fullName: 1,
+                                        username: 1,
+                                        avatar: 1,
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            $addFields: {
+                owner : {
+                    $first: "$owner" // it will give the first element of the array owner 
+                }
+            }
+        }
+          
+    ])
+
+    return res
+    .status(200)
+    .json(
+        new ApiResoponse(
+            200, 
+            user[0].watchHistory, 
+            "Watch history fetched successfully"
+            )
+        )
+})
+    
+
+
 export { 
     registerUser,
     loginUser,
@@ -407,7 +478,8 @@ export {
     updateAccountDetails,
     updateUserAvatar,
     updateUserCoverImage,
-    getUserChannelProfile
+    getUserChannelProfile,
+    getWatchHistory
 
  }
 
